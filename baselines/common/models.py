@@ -62,7 +62,7 @@ def mlp(num_layers=2, num_hidden=64, activation=tf.nn.relu, layer_norm=False):
 @register("hybrid")
 def hybrid(num_layers=2, num_hidden=64, activation=tf.nn.relu, layer_norm=False):
     """
-    Default = num_layers=2, num_hidden=64, activation=tf.tanh, layer_norm=False
+    Default: num_layers=2, num_hidden=64, activation=tf.tanh, layer_norm=False
     Stack of fully-connected layers to be used in a policy / q-function approximator
 
     Parameters:
@@ -79,9 +79,13 @@ def hybrid(num_layers=2, num_hidden=64, activation=tf.nn.relu, layer_norm=False)
 
     function that builds fully connected network with a given input tensor / placeholder
     """
-
     def network_fn(X):
-        h = tf.layers.flatten(X)
+        p, _ = tf.split(X, [1,1], 1)
+        p, _ = tf.split(p, [1,31], 2)
+        p, _ = tf.split(p, [16, 16], 3)
+
+        h = tf.layers.flatten(p)
+
         for i in range(num_layers):
             h = fc(h, 'mlp_fc{}'.format(i), nh=num_hidden, init_scale=np.sqrt(2))
             if layer_norm:
