@@ -80,18 +80,27 @@ def hybrid(num_layers=2, num_hidden=64, activation=tf.nn.relu, layer_norm=False)
     function that builds fully connected network with a given input tensor / placeholder
     """
     def network_fn(X):
-        p, _ = tf.split(X, [1,1], 1)
-        p, _ = tf.split(p, [1,31], 2)
-        p, _ = tf.split(p, [16, 16], 3)
+        p, e = tf.split(X, [1, 32], 1)
+        p, _ = tf.split(p, [16, 16], 2)
 
-        h = tf.layers.flatten(p)
 
-        for i in range(num_layers):
-            h = fc(h, 'mlp_fc{}'.format(i), nh=num_hidden, init_scale=np.sqrt(2))
-            if layer_norm:
-                h = tf.contrib.layers.layer_norm(h, center=True, scale=True)
-            h = activation(h)
+        activ = tf.nn.relu
 
+        e = tf.cast(e, tf.float32)
+        e = tf.expand_dims(e, -1)
+        e = activ(conv(e, 'c1', nf=16, rf=5, stride=2, init_scale=np.sqrt(2)))
+        e = activ(conv(e, 'c2', nf=32, rf=4, stride=1, init_scale=np.sqrt(2)))
+        e = activ(conv(e, 'c3', nf=32, rf=3, stride=1, init_scale=np.sqrt(2)))
+        e = conv_to_fc(e)
+        e = activ(fc(e, 'fc1', nh=128, init_scale=np.sqrt(2)))
+
+        p = tf.layers.flatten(p)
+        h = tf.concat([p, e], 1)
+
+        h = fc(h, 'mlp_fc{}'.format(0), nh=512, init_scale=np.sqrt(2))
+        h = activation(h)
+        h = fc(h, 'mlp_fc{}'.format(1), nh=256, init_scale=np.sqrt(2))
+        h = activation(h)
         return h
 
     return network_fn
