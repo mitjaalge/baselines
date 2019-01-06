@@ -30,7 +30,7 @@ def nature_cnn(unscaled_images, **conv_kwargs):
 @register("mlp")
 def mlp(num_layers=2, num_hidden=64, activation=tf.nn.relu, layer_norm=False):
     """
-    Default = num_layers=2, num_hidden=64, activation=tf.tanh, layer_norm=False
+    Default: num_layers=2, num_hidden=64, activation=tf.tanh, layer_norm=False
     Stack of fully-connected layers to be used in a policy / q-function approximator
 
     Parameters:
@@ -60,50 +60,37 @@ def mlp(num_layers=2, num_hidden=64, activation=tf.nn.relu, layer_norm=False):
     return network_fn
 
 @register("hybrid")
-def hybrid(num_layers=2, num_hidden=64, activation=tf.nn.relu, layer_norm=False):
+def hybrid(activation=tf.nn.relu):
     """
-    Default: num_layers=2, num_hidden=64, activation=tf.tanh, layer_norm=False
-    Stack of fully-connected layers to be used in a policy / q-function approximator
+    Hybrid network for the Deep Gait environment
 
-    Parameters:
-    ----------
-
-    num_layers: int                 number of fully-connected layers (default: 2)
-
-    num_hidden: int                 size of fully-connected layers (default: 64)
-
-    activation:                     activation function (default: tf.tanh)
-
-    Returns:
-    -------
-
-    function that builds fully connected network with a given input tensor / placeholder
     """
     def network_fn(X):
         p, e = tf.split(X, [1, 32], 1)
-        p, _ = tf.split(p, [16, 16], 2)
+        p, _ = tf.split(p, [13, 19], 2)
 
 
         activ = tf.nn.relu
 
         e = tf.cast(e, tf.float32)
         e = tf.expand_dims(e, -1)
-        e = activ(conv(e, 'c1', nf=16, rf=5, stride=2, init_scale=np.sqrt(2)))
-        e = activ(conv(e, 'c2', nf=32, rf=4, stride=1, init_scale=np.sqrt(2)))
-        e = activ(conv(e, 'c3', nf=32, rf=3, stride=1, init_scale=np.sqrt(2)))
+        e = activ(conv(e, 'c1', nf=8, rf=4, stride=2, init_scale=np.sqrt(2)))
+        e = activ(conv(e, 'c2', nf=16, rf=3, stride=1, init_scale=np.sqrt(2)))
+        # e = activ(conv(e, 'c3', nf=32, rf=3, stride=1, init_scale=np.sqrt(2)))
         e = conv_to_fc(e)
-        e = activ(fc(e, 'fc1', nh=128, init_scale=np.sqrt(2)))
+        e = activ(fc(e, 'fc1', nh=64, init_scale=np.sqrt(2)))
 
         p = tf.layers.flatten(p)
         h = tf.concat([p, e], 1)
 
-        h = fc(h, 'mlp_fc{}'.format(0), nh=512, init_scale=np.sqrt(2))
+        h = fc(h, 'mlp_fc{}'.format(0), nh=128, init_scale=np.sqrt(2))
         h = activation(h)
-        h = fc(h, 'mlp_fc{}'.format(1), nh=256, init_scale=np.sqrt(2))
+        h = fc(h, 'mlp_fc{}'.format(1), nh=64, init_scale=np.sqrt(2))
         h = activation(h)
         return h
 
     return network_fn
+
 
 @register("cnn")
 def cnn(**conv_kwargs):
